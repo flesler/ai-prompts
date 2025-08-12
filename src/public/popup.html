@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root {
+      --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --primary-hover: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      --success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --danger: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #334155;
+      --text-muted: #64748b;
+      --shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 380px;
+      min-height: 500px;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      color: var(--text);
+    }
+    
+    .header {
+      background: var(--surface);
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    
+    .header h1 {
+      margin: 0 0 16px 0;
+      font-size: 20px;
+      font-weight: 700;
+      background: var(--primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .project-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+    
+    .project-selector select {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      background: var(--surface);
+      color: var(--text);
+      transition: all 0.2s ease;
+    }
+
+    .project-selector select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .manage-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      height: 36px;
+    }
+    
+    .manage-btn:hover {
+      background: var(--surface-3);
+      color: var(--text);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
+    }
+    
+    .add-prompt {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      width: 100%;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow);
+    }
+    
+    .add-prompt:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .content {
+      padding: 20px;
+      background: transparent;
+    }
+    
+    .prompt-list {
+      max-height: 350px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .prompt-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .prompt-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .prompt-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .prompt-list::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+    
+    .prompt-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow);
+    }
+    
+    .prompt-item:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+      border-color: #667eea;
+    }
+    
+    .prompt-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    
+    .prompt-preview {
+      font-size: 12px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-bottom: 8px;
+    }
+    
+    .prompt-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    
+    .prompt-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+    
+    .prompt-btn:hover {
+      background: var(--surface-3);
+      transform: translateY(-1px);
+    }
+    
+    .prompt-btn.edit {
+      color: #667eea;
+      border-color: #667eea;
+    }
+
+    .prompt-btn.edit:hover {
+      background: rgba(102, 126, 234, 0.1);
+    }
+    
+    .prompt-btn.delete {
+      color: #f43f5e;
+      border-color: #f43f5e;
+    }
+
+    .prompt-btn.delete:hover {
+      background: rgba(244, 63, 94, 0.1);
+    }
+    
+    .edit-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+      from { 
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    .edit-modal-content {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 90%;
+      max-width: 450px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      animation: slideIn 0.3s ease;
+    }
+    
+    .edit-modal h2 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      transition: all 0.2s ease;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+    
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+    
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--surface-3);
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+
+    .project-management-list {
+      margin-bottom: 16px;
+    }
+
+    .project-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .project-name {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .project-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .project-btn {
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .project-btn:hover {
+      background: var(--surface-3);
+      transform: translateY(-1px);
+    }
+
+    .project-btn.delete {
+      color: #f43f5e;
+      border-color: #f43f5e;
+    }
+
+    .project-btn.delete:hover {
+      background: rgba(244, 63, 94, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>AI Prompts</h1>
+    
+    <div class="project-selector">
+      <select id="projectSelect">
+        <option value="default">Default</option>
+      </select>
+      <button class="manage-btn" id="addProject" title="Add New Project">+</button>
+      <button class="manage-btn" id="manageProjectsReal" title="Manage Projects">📁</button>
+      <button class="manage-btn" id="manageProjects" title="Settings">⚙️</button>
+    </div>
+    
+    <button class="add-prompt" id="addPrompt">+ Add New Prompt</button>
+  </div>
+  
+  <div class="content">
+    <div class="prompt-list" id="promptList">
+      <!-- Prompts will be populated here -->
+    </div>
+  </div>
+  
+  <!-- Edit Modal -->
+  <div class="edit-modal" id="editModal">
+    <div class="edit-modal-content">
+      <h2 id="modalTitle">Add New Prompt</h2>
+      <form id="promptForm">
+        <div class="form-group">
+          <label for="promptTitle">Title</label>
+          <input type="text" id="promptTitle" placeholder="Enter prompt title..." required>
+        </div>
+        <div class="form-group">
+          <label for="promptContent">Content</label>
+          <textarea id="promptContent" placeholder="Enter your prompt content..." required></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="savePrompt">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Project Management Modal -->
+  <div class="edit-modal" id="projectModal">
+    <div class="edit-modal-content">
+      <h2>Manage Projects</h2>
+      <div id="projectList" class="project-management-list">
+        <!-- Projects will be populated here -->
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="closeProjectModal">Close</button>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

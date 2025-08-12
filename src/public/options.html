@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AI Prompts - Options</title>
+  <style>
+    :root {
+      --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --primary-hover: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      --success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --danger: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #334155;
+      --text-muted: #64748b;
+      --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: var(--text);
+    }
+    
+    .container {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    h1 {
+      margin: 0 0 32px 0;
+      font-size: 28px;
+      font-weight: 700;
+      background: var(--primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+    }
+    
+    .section {
+      margin-bottom: 32px;
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+    
+    .section h2 {
+      margin: 0 0 20px 0;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section h2::before {
+      content: '';
+      width: 4px;
+      height: 20px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      background: var(--surface);
+      color: var(--text);
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]:focus, 
+    input[type="number"]:focus, 
+    select:focus, 
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    input[type="checkbox"] {
+      margin-right: 12px;
+      width: 18px;
+      height: 18px;
+      accent-color: #667eea;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+    }
+
+    .checkbox-group:hover {
+      background: var(--surface-3);
+    }
+
+    .checkbox-group label {
+      margin-bottom: 0;
+      cursor: pointer;
+      flex: 1;
+    }
+    
+    .save-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin-right: 12px;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow);
+    }
+    
+    .save-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .import-export-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .description {
+      background: var(--surface);
+      border-left: 4px solid #667eea;
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    
+    .status {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      display: none;
+      font-weight: 500;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .status.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    .status.error {
+      background: rgba(244, 63, 94, 0.1);
+      color: #e11d48;
+      border: 1px solid rgba(244, 63, 94, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI Prompts - Settings</h1>
+    
+    <div class="section">
+      <h2>General Settings</h2>
+      
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="enableNotifications">
+          <label for="enableNotifications">Enable notifications</label>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="enableContextMenu">
+          <label for="enableContextMenu">Show in context menu</label>
+        </div>
+      </div>
+      
+
+    </div>
+    
+
+    
+    <div class="section">
+      <h2>Import/Export</h2>
+      
+      <div class="form-group">
+        <div class="import-export-actions">
+          <button id="exportBtn" class="save-btn">Export to CSV</button>
+          <button id="importBtn" class="save-btn">Import from File</button>
+        </div>
+        <input type="file" id="importFile" accept=".csv" style="display: none;">
+        <div class="description">
+          Export creates a CSV file with format: Project, Title, Content.<br>
+          Can be opened in Excel or Google Sheets. Import supports CSV format.
+        </div>
+      </div>
+    </div>
+    
+
+    
+    <div id="status" class="status"></div>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html>
