@@ -59,9 +59,16 @@ export function getPlatformName(hostname: string): string {
 
 export function generateDomainMatches(): string[] {
   return AI_DOMAIN_GROUPS.flatMap(group =>
-    group.domains.flatMap(domain => [
-      `*://${domain}/*`,
-      `*://www.${domain}/*`,
-    ]),
+    group.domains.flatMap(domain => {
+      const patterns = [`*://${domain}/*`]
+
+      // Only add www. for root domains (2 parts: example.com)
+      const isRootDomain = domain.split('.').length === 2
+      if (isRootDomain) {
+        patterns.push(`*://www.${domain}/*`)
+      }
+
+      return patterns
+    }),
   )
 }

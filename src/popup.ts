@@ -365,4 +365,3 @@ function insertPromptIntoPage(content: string) {
   })
 }
 
-

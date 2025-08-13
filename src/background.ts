@@ -1,5 +1,5 @@
 import { InsertPromptResponse, MessageAction, StorageResult } from './types.js'
-import { generateId, getCurrentISOString, truncate } from './utils.js'
+import { generateId, getIso, truncate } from './utils.js'
 
 // Local Chrome API utilities for background script
 function promisify<TResult, TArgs extends any[]>(
@@ -236,7 +236,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           id: generateId(),
           name: projectRequest.name,
           description: projectRequest.description || '',
-          createdAt: getCurrentISOString(),
+          createdAt: getIso(),
         }
         projects.push(newProject)
 

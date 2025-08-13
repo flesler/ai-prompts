@@ -32,7 +32,6 @@ export enum MessageAction {
   INSERT_PROMPT = 'insertPrompt'
 }
 
-
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   enableNotifications: true,
   enableContextMenu: true,

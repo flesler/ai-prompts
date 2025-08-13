@@ -74,12 +74,12 @@ export function generateUniqueId(): string {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9)
 }
 
-export function getCurrentISOString(): string {
+export function getIso(): string {
   return new Date().toISOString()
 }
 
-export function formatDateForFilename(): string {
-  return new Date().toISOString().split('T')[0]
+export function getToday(): string {
+  return getIso().split('T')[0]
 }
 
 export function populateSelectOptions(
@@ -116,8 +116,6 @@ export function showUINotification(message: string, type: 'success' | 'error' = 
     }, 3000)
   }
 }
-
-
 
 export function confirmAction(message: string): boolean {
   return confirm(message)

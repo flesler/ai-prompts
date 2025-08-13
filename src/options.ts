@@ -1,7 +1,5 @@
 import { DEFAULT_SETTINGS, ExtensionSettings, MessageAction, Prompt } from './types.js'
-import { addEvent, formatDateForFilename, generateUniqueId, getCheckboxValue, getCurrentISOString, getProjectDisplayName, getProjectsFromResult, getPromptsFromResult, getSettingsFromResult, setInputValue, showUINotification } from './utils.js'
-
-
+import { addEvent, generateUniqueId, getCheckboxValue, getIso, getProjectDisplayName, getProjectsFromResult, getPromptsFromResult, getSettingsFromResult, getToday, setInputValue, showUINotification } from './utils.js'
 
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings()
@@ -59,7 +57,7 @@ function exportPrompts() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `ai-prompts-export-${formatDateForFilename()}.csv`
+    a.download = `ai-prompts_${getToday()}.csv`
     a.click()
     URL.revokeObjectURL(url)
 
@@ -118,7 +116,7 @@ function parseCSV(csvContent: string): Prompt[] {
         title: fields[1] || 'Imported Prompt',
         content: fields[2] || '',
         project: fields[0] || 'default',
-        createdAt: getCurrentISOString(),
+        createdAt: getIso(),
       })
     }
   })
@@ -156,5 +154,4 @@ function parseCSVLine(line: string): string[] {
   fields.push(currentField)
   return fields
 }
-
 

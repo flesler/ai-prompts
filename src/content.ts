@@ -116,8 +116,6 @@ function createFloatingButton() {
   document.body.appendChild(floatingButton)
 }
 
-
-
 function setupInputDetection() {
   document.addEventListener('focusin', (e) => {
     const target = e.target as HTMLElement
@@ -202,8 +200,6 @@ function showTemporarySuccess() {
     }, 1500)
   }
 }
-
-
 
 function insertPromptIntoActiveElement(content: string): boolean {
   const selectors = getSelectorsForDomain(window.location.hostname)

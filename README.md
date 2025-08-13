@@ -11,6 +11,14 @@ A powerful Chrome extension for organizing and quick-inserting prompts across AI
 - **Perplexity** - Perplexity.ai
 - **X/Grok** - X.com Grok chat
 
+## 📸 In Action
+
+<p align="center">
+  <img src="images/screenshot.png" alt="AI Prompts Extension Demo" width="100%">
+</p>
+
+*The extension seamlessly integrates with AI platforms, providing a floating button for quick prompt access and a clean popup interface for prompt management.*
+
 ## 🚀 Key Features
 
 ### ✨ Smart Prompt Management
