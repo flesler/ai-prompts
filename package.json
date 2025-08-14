@@ -1,6 +1,6 @@
 {
   "name": "ai-prompts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Chrome extension to organize and quick-insert prompts for AI chat platforms",
   "files": [
@@ -22,7 +22,7 @@
     "lint:fix": "npm run lint -- --fix",
     "lint:full": "npm run build:check && npm run lint:fix",
     "test": "npm run lint:full && npm run build",
-    "prepack": "npm run build:clean && npm run test",
+    "prepack": "npm run build:clean && npm run test && npm run build:zip",
     "publish:dry": "npm pack --dry-run",
     "publish:npm": "npm publish",
     "publish:webstore": "npm run prepack && npm run build:zip && npm run webstore:upload",
