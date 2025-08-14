@@ -1,4 +1,4 @@
-import { ExtensionSettings, MessageAction, Project, Prompt, StorageResult } from './types.js'
+import type { ExtensionSettings, MessageAction, Project, Prompt, StorageResult } from './types.js'
 
 export function getElement<T extends HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null

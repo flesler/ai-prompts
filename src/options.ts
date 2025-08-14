@@ -1,4 +1,5 @@
-import { DEFAULT_SETTINGS, ExtensionSettings, MessageAction, Prompt } from './types.js'
+import type { ExtensionSettings, Prompt } from './types.js'
+import { DEFAULT_SETTINGS, MessageAction } from './types.js'
 import { addEvent, generateUniqueId, getCheckboxValue, getIso, getProjectDisplayName, getProjectsFromResult, getPromptsFromResult, getSettingsFromResult, getToday, setInputValue, showUINotification } from './utils.js'
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,4 +1,5 @@
-import { InsertPromptResponse, MessageAction, StorageResult } from './types.js'
+import type { InsertPromptResponse, StorageResult } from './types.js'
+import { MessageAction } from './types.js'
 import { generateId, getIso, truncate } from './utils.js'
 
 // Local Chrome API utilities for background script

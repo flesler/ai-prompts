@@ -1,4 +1,5 @@
-import { ExtensionSettings, MessageAction, MessageResponse, Project, ProjectsResponse, Prompt, PromptsResponse, SaveProjectResponse, StorageResult } from './types.js'
+import type { ExtensionSettings, MessageResponse, Project, ProjectsResponse, Prompt, PromptsResponse, SaveProjectResponse, StorageResult } from './types.js'
+import { MessageAction } from './types.js'
 import { addEvent, confirmAction, escapeHtml, getElement, getProjectDisplayName, getRequiredElement, populateSelectOptions, truncate } from './utils.js'
 
 // Local Chrome API utilities for popup script
