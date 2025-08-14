@@ -1,6 +1,6 @@
 {
   "name": "ai-prompts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Chrome extension to organize and quick-insert prompts for AI chat platforms",
   "files": [
