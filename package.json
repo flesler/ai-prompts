@@ -29,9 +29,9 @@
     "webstore:auth": "chrome-webstore-upload auth --config .webstore-upload-config.json",
     "webstore:upload": "chrome-webstore-upload upload --source dist.zip --auto-publish false --config .webstore-upload-config.json",
     "webstore:publish": "chrome-webstore-upload publish --config .webstore-upload-config.json",
-    "version:patch": "npm version patch",
-    "version:minor": "npm version minor",
-    "version:major": "npm version major"
+    "version:patch": "bin/release.sh patch",
+    "version:minor": "bin/release.sh minor",
+    "version:major": "bin/release.sh major"
   },
   "keywords": [],
   "author": "Ariel Flesler <aflesler@gmail.com>",
