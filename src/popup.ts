@@ -279,13 +279,15 @@ function displayPrompts(prompts: Prompt[]) {
       <div class="prompt-actions">
         <button class="prompt-btn edit" data-id="${prompt.id}">Edit</button>
         <button class="prompt-btn delete" data-id="${prompt.id}">Delete</button>
-        <button class="prompt-btn" data-id="${prompt.id}">Insert</button>
+        <button class="prompt-btn copy" data-id="${prompt.id}">Copy</button>
+        <button class="prompt-btn insert" data-id="${prompt.id}">Insert</button>
       </div>
     `
 
     const editBtn = promptElement.querySelector('.edit')
     const deleteBtn = promptElement.querySelector('.delete')
-    const insertBtn = promptElement.querySelector('.prompt-btn:not(.edit):not(.delete)')
+    const copyBtn = promptElement.querySelector('.copy')
+    const insertBtn = promptElement.querySelector('.insert')
 
     editBtn?.addEventListener('click', (e) => {
       e.stopPropagation()
@@ -297,6 +299,11 @@ function displayPrompts(prompts: Prompt[]) {
       if (confirmAction(`Delete prompt "${prompt.title}"?`)) {
         deletePrompt(prompt.id)
       }
+    })
+
+    copyBtn?.addEventListener('click', (e) => {
+      e.stopPropagation()
+      copyPromptToClipboard(prompt.content)
     })
 
     insertBtn?.addEventListener('click', (e) => {
@@ -364,5 +371,36 @@ function insertPromptIntoPage(content: string) {
       window.close() // Close popup after inserting
     }
   })
+}
+
+async function copyPromptToClipboard(content: string) {
+  try {
+    await navigator.clipboard.writeText(content)
+    // Show temporary feedback
+    const notification = document.createElement('div')
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 10000;
+      animation: fadeIn 0.3s ease-in;
+    `
+    notification.textContent = 'Copied to clipboard!'
+    document.body.appendChild(notification)
+
+    // Remove notification after 2 seconds
+    setTimeout(() => {
+      notification.remove()
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy to clipboard:', err)
+    // Fallback: show error message
+    alert('Failed to copy to clipboard')
+  }
 }
 
