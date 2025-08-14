@@ -9,7 +9,7 @@ export const FALLBACK_SELECTORS = ['textarea', '[contenteditable="true"]', 'inpu
 export const AI_DOMAIN_GROUPS: DomainGroup[] = [
   {
     domains: ['chatgpt.com', 'chat.openai.com', 'openai.com'],
-    selectors: ['form textarea'],
+    selectors: ['#prompt-textarea', '.ProseMirror[contenteditable="true"]'],
     name: 'OpenAI',
   },
   {
