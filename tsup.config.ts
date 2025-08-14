@@ -57,9 +57,6 @@ function copyDirectory(src: string, dest: string) {
 
 async function generateManifest() {
   const matches = generateDomainMatches()
-  matches.push('*://x.com/i/grok*')
-  matches.push('*://bing.com/chat*')
-
   const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'))
   const manifest = JSON.parse(readFileSync('src/public/manifest.json', 'utf-8'))
 

@@ -10,7 +10,7 @@ console.log('AI Prompts content script loaded')
 let currentInputElement: HTMLElement | null = null
 let floatingButton: HTMLElement | null = null
 let platformSelectors: string[] = []
-let platformName: string = ''
+let platformName: string | undefined = undefined
 
 let isInitialized = false
 
@@ -38,13 +38,18 @@ function init() {
       }
     })
 
-    platformSelectors = getSelectorsForDomain(window.location.hostname)
-    platformName = getPlatformName(window.location.hostname)
+    const fullHostPath = window.location.hostname + window.location.pathname
+    platformSelectors = getSelectorsForDomain(fullHostPath)
+    platformName = getPlatformName(fullHostPath)
 
-    console.log(`AI Prompts: Initialized for ${platformName} with selectors:`, platformSelectors)
-
-    createFloatingButton()
-    setupInputDetection()
+    // Only create button and setup detection for recognized AI platforms
+    if (platformName) {
+      createFloatingButton()
+      setupInputDetection()
+      console.log(`AI Prompts: Activated for ${platformName} with selectors:`, platformSelectors)
+    } else {
+      console.log('AI Prompts: Unknown platform, extension disabled')
+    }
 
     isInitialized = true
   } catch (error) {
@@ -202,7 +207,16 @@ function showTemporarySuccess() {
 }
 
 function insertPromptIntoActiveElement(content: string): boolean {
-  const selectors = getSelectorsForDomain(window.location.hostname)
+  const fullHostPath = window.location.hostname + window.location.pathname
+  const currentPlatformName = getPlatformName(fullHostPath)
+
+  // Don't insert on unknown platforms
+  if (!currentPlatformName) {
+    console.log('🤖 AI Prompts - Insert blocked: Unknown platform')
+    return false
+  }
+
+  const selectors = getSelectorsForDomain(fullHostPath)
   let targetElement: HTMLElement | null = null
 
   for (const selector of selectors) {
@@ -297,9 +311,9 @@ function insertPromptIntoActiveElement(content: string): boolean {
     console.error('🤖 AI Prompts - Invalid target element:', {
       tagName: targetElement?.tagName,
       contentEditable: targetElement?.contentEditable,
-      platformName,
+      platformName: currentPlatformName,
     })
-    alert(`❌ Cannot insert prompt: No valid input field found on this ${platformName} page. Please click on a text input first.`)
+    alert(`❌ Cannot insert prompt: No valid input field found on this ${currentPlatformName} page. Please click on a text input first.`)
     return false
   }
 }

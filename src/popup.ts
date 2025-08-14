@@ -46,9 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   addEvent('addProject', 'click', () => {
-    const name = prompt('Enter project name:')
-    if (name?.trim()) {
-      createProject(name.trim())
+    const name = prompt('Enter project name:')?.trim()
+    if (name) {
+      createProject(name)
     }
   })
 
