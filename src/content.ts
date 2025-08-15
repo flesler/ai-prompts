@@ -7,7 +7,7 @@ import { truncate } from './utils.js'
 
 console.log('AI Prompts content script loaded')
 
-let currentInputElement: HTMLElement | null = null
+let currentInput: HTMLElement | null = null
 let floatingButton: HTMLElement | null = null
 let platformSelectors: string[] = []
 let platformName: string | undefined = undefined
@@ -93,7 +93,7 @@ function createFloatingButton() {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
   `
@@ -119,26 +119,34 @@ function createFloatingButton() {
   })
 
   document.body.appendChild(floatingButton)
+  showFloatingButton(currentInput)
 }
 
 function setupInputDetection() {
   document.addEventListener('focusin', (e) => {
     const target = e.target as HTMLElement
     if (isInputElement(target)) {
-      currentInputElement = target
       showFloatingButton(target)
+    } else {
+      recalculate()
     }
   })
 
   let resizeTimeout: number
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimeout)
-    resizeTimeout = window.setTimeout(() => {
-      if (currentInputElement && isElementVisible(currentInputElement)) {
-        showFloatingButton(currentInputElement)
-      }
-    }, 100)
+    resizeTimeout = window.setTimeout(recalculate, 100)
   })
+
+  window.setInterval(recalculate, 1000)
+}
+
+function recalculate() {
+  if (currentInput && !isElementVisible(currentInput)) {
+    showFloatingButton(null)
+  } else {
+    showFloatingButton(currentInput)
+  }
 }
 
 function isInputElement(element: HTMLElement): boolean {
@@ -151,23 +159,26 @@ function isInputElement(element: HTMLElement): boolean {
       continue
     }
   }
-
-  return (
-    element.tagName === 'TEXTAREA' ||
-    (element.tagName === 'INPUT' && (element as HTMLInputElement).type === 'text') ||
-    element.contentEditable === 'true'
-  )
+  return false
 }
 
 function isElementVisible(element: HTMLElement): boolean {
+  if (!element.parentElement) {
+    return false
+  }
   const rect = element.getBoundingClientRect()
   return rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.bottom <= window.innerHeight
 }
 
-function showFloatingButton(inputElement: HTMLElement) {
+function showFloatingButton(input: HTMLElement | null) {
+  currentInput = input
   if (!floatingButton) return
+  if (!input) {
+    floatingButton.style.display = 'none'
+    return
+  }
 
-  const rect = inputElement.getBoundingClientRect()
+  const rect = input.getBoundingClientRect()
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop
   const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
 
@@ -228,28 +239,13 @@ function insertPromptIntoActiveElement(content: string): boolean {
   }
 
   if (!targetElement) {
-    targetElement = currentInputElement || document.activeElement as HTMLElement
+    targetElement = currentInput || document.activeElement as HTMLElement
   }
-
-  if (!targetElement || !isInputElement(targetElement)) {
-    const allInputs = document.querySelectorAll('textarea, input[type="text"], input[type="search"], [contenteditable="true"]')
-    for (let i = 0; i < allInputs.length; i++) {
-      const input = allInputs[i] as HTMLElement
-      const isDisabled = (input as HTMLInputElement).disabled || (input as HTMLTextAreaElement).disabled
-      const isReadOnly = (input as HTMLInputElement).readOnly || (input as HTMLTextAreaElement).readOnly
-      if (input.offsetParent !== null && !isDisabled && !isReadOnly) {
-        targetElement = input
-        console.log('🤖 AI Prompts - Found fallback input element:', input.tagName, input.id || input.className)
-        break
-      }
-    }
-  }
-
   console.log('🤖 AI Prompts - Insert attempt:', {
     targetElement,
     foundBySelector: !!document.querySelector(selectors[0]),
     selectors,
-    currentInputElement,
+    currentInputElement: currentInput,
     activeElement: document.activeElement,
     tagName: targetElement?.tagName,
     contentEditable: targetElement?.contentEditable,

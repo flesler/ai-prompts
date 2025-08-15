@@ -4,7 +4,7 @@ export interface DomainGroup {
   name: string
 }
 
-const FALLBACK_SELECTORS = ['textarea', '[contenteditable="true"]', 'input[type="search"]', 'input[type="text"]']
+const FALLBACK_SELECTORS = ['textarea', '[contenteditable="true"]']
 
 const AI_DOMAIN_GROUPS: DomainGroup[] = [
   {
