@@ -1,6 +1,6 @@
 import type { InsertPromptResponse, StorageResult } from './types.js'
 import { MessageAction } from './types.js'
-import { generateId, getIso, truncate } from './utils.js'
+import { generateId, getIso, getProjectDisplayName, truncate } from './utils.js'
 
 // Local Chrome API utilities for background script
 function promisify<TResult, TArgs extends any[]>(
@@ -24,8 +24,7 @@ async function showNotification(title: string, message: string): Promise<void> {
       return
     }
 
-    const result = await getChromeStorage(['settings'])
-    const settings = result.settings || {}
+    const { settings = {} } = await getChromeStorage(['settings'])
     if (settings.enableNotifications) {
       chrome.notifications.create({
         type: 'basic',
@@ -54,40 +53,61 @@ async function insertPromptToTab(tabId: number, content: string): Promise<boolea
 
 chrome.runtime.onInstalled.addListener(async () => {
   console.log('AI Prompts extension installed')
-
-  const result = await getChromeStorage(['settings'])
-  const settings = result.settings || { enableContextMenu: true }
-  if (settings.enableContextMenu) {
-    createContextMenu()
-  }
+  initializeContextMenu()
 })
 
+chrome.runtime.onStartup.addListener(async () => {
+  console.log('AI Prompts extension started')
+  initializeContextMenu()
+})
+
+async function initializeContextMenu() {
+  try {
+    const { settings = { enableContextMenu: true } } = await getChromeStorage(['settings'])
+    if (settings.enableContextMenu) {
+      await createContextMenu()
+    }
+  } catch (error) {
+    console.error('Failed to initialize context menu:', error)
+  }
+}
+
 async function createContextMenu() {
-  await removeAllContextMenus()
-  const result = await getChromeStorage(['prompts'])
-  const prompts = result.prompts || []
-  const recentPrompts = prompts.slice(-5).reverse()
+  try {
+    await removeAllContextMenus()
+    const { prompts = [], projects = [], settings = {} } = await getChromeStorage(['prompts', 'projects', 'settings'])
+    const recentPrompts = prompts.slice(-5).reverse()
 
-  recentPrompts.forEach((prompt) => {
-    chrome.contextMenus.create({
-      id: `prompt-${prompt.id}`,
-      title: truncate(prompt.title),
-      contexts: ['editable'],
-    })
-  })
+    recentPrompts.forEach((prompt) => {
+      const projectId = prompt.project || 'default'
+      const projectName = getProjectDisplayName(projectId, projects, settings)
+      const menuTitle = `${projectName} > ${prompt.title}`
 
-  if (recentPrompts.length > 0) {
-    chrome.contextMenus.create({
-      id: 'ai-prompts-separator',
-      type: 'separator',
-      contexts: ['editable'],
+      chrome.contextMenus.create({
+        id: `prompt-${prompt.id}`,
+        title: truncate(menuTitle),
+        contexts: ['editable'],
+      })
     })
 
+    if (recentPrompts.length > 0) {
+      chrome.contextMenus.create({
+        id: 'ai-prompts-separator',
+        type: 'separator',
+        contexts: ['editable'],
+      })
+    }
+
+    // Always show "View all prompts" menu item
     chrome.contextMenus.create({
       id: 'view-all-prompts',
       title: 'View all prompts...',
       contexts: ['editable'],
     })
+
+    console.log(`Context menu created with ${recentPrompts.length} recent prompts`)
+  } catch (error) {
+    console.error('Failed to create context menu:', error)
   }
 }
 
@@ -104,15 +124,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (typeof info.menuItemId === 'string' && info.menuItemId.startsWith('prompt-')) {
     const promptId = info.menuItemId.replace('prompt-', '')
     try {
-      const result = await getChromeStorage(['prompts'])
-      const prompts = result.prompts || []
+      const { prompts = [] } = await getChromeStorage(['prompts'])
       const prompt = prompts.find((p) => p.id === promptId)
 
       if (prompt && tab?.id) {
-        const success = await insertPromptToTab(tab.id, prompt.content)
-        if (success) {
-          await showNotification('AI Prompts', `Inserted prompt: ${prompt.title}`)
-        }
+        await insertPromptToTab(tab.id, prompt.content)
       }
     } catch (error) {
       console.error('Context menu insertion failed:', error)
@@ -123,18 +139,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 chrome.commands.onCommand.addListener(async (command: string) => {
   if (command === 'insert-last-prompt') {
     try {
-      const result = await getChromeStorage(['prompts'])
-      const prompts = result.prompts || []
+      const { prompts = [] } = await getChromeStorage(['prompts'])
       if (prompts.length > 0) {
         const lastPrompt = prompts[prompts.length - 1]
-
         const tabs = await queryTabs({ active: true, currentWindow: true })
 
         if (tabs[0]?.id) {
-          const success = await insertPromptToTab(tabs[0].id, lastPrompt.content)
-          if (success) {
-            await showNotification('AI Prompts', `Inserted: ${lastPrompt.title}`)
-          }
+          await insertPromptToTab(tabs[0].id, lastPrompt.content)
         }
       }
     } catch (error) {
@@ -146,10 +157,9 @@ chrome.commands.onCommand.addListener(async (command: string) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === MessageAction.GET_PROMPTS) {
     ;(async () => {
-      const result = await getChromeStorage(['prompts'])
-      const allPrompts = result.prompts || []
+      const { prompts = [] } = await getChromeStorage(['prompts'])
       const projectFilter = (request as { project?: string }).project || 'default'
-      const filteredPrompts = allPrompts.filter((prompt) =>
+      const filteredPrompts = prompts.filter((prompt) =>
         (prompt.project || 'default') === projectFilter,
       )
       sendResponse({ prompts: filteredPrompts })
@@ -159,24 +169,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === MessageAction.GET_PROJECTS) {
     ;(async () => {
-      const result = await getChromeStorage(['projects'])
-      sendResponse({ projects: result.projects || [] })
+      const { projects = [] } = await getChromeStorage(['projects'])
+      sendResponse({ projects })
     })()
     return true
   }
 
   if (request.action === MessageAction.SAVE_PROMPT) {
     ;(async () => {
-      const result = await getChromeStorage(['prompts'])
-      const prompts = result.prompts || []
+      const { prompts = [] } = await getChromeStorage(['prompts'])
       const saveRequest = request as unknown as { title: string; content: string; project?: string }
 
       prompts.push({
-        id: Date.now().toString(),
+        id: generateId(),
         title: saveRequest.title,
         content: saveRequest.content,
         project: saveRequest.project || 'default',
-        createdAt: new Date().toISOString(),
+        createdAt: getIso(),
       })
 
       await setChromeStorage({ prompts })
@@ -187,11 +196,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === MessageAction.UPDATE_CONTEXT_MENU) {
-    if (request.enabled) {
-      createContextMenu()
-    } else {
-      removeAllContextMenus().then(() => sendResponse({ success: true }))
-    }
+    ; (async () => {
+      if (request.enabled) {
+        await createContextMenu()
+      } else {
+        await removeAllContextMenus()
+      }
+      sendResponse({ success: true })
+    })()
     return true
   }
 
@@ -212,9 +224,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === MessageAction.SAVE_PROJECT) {
     ;(async () => {
-      const result = await getChromeStorage(['projects', 'settings'])
-      const projects = result.projects || []
-      const settings = result.settings || {}
+      const { projects = [], settings = {} } = await getChromeStorage(['projects', 'settings'])
       const projectRequest = request as unknown as { id?: string; name: string; description?: string }
 
       if (projectRequest.id === 'default') {
@@ -250,8 +260,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === MessageAction.UPDATE_PROMPT) {
     ;(async () => {
-      const result = await getChromeStorage(['prompts'])
-      const prompts = result.prompts || []
+      const { prompts = [] } = await getChromeStorage(['prompts'])
       const updateRequest = request as unknown as { id: string; title: string; content: string }
       const index = prompts.findIndex((p) => p.id === updateRequest.id)
 
@@ -274,8 +283,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === MessageAction.DELETE_PROMPT) {
     ;(async () => {
-      const result = await getChromeStorage(['prompts'])
-      const prompts = result.prompts || []
+      const { prompts = [] } = await getChromeStorage(['prompts'])
       const deleteRequest = request as unknown as { id: string }
       const filteredPrompts = prompts.filter((p) => p.id !== deleteRequest.id)
 
@@ -288,10 +296,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === MessageAction.DELETE_PROJECT) {
     ;(async () => {
-      const result = await getChromeStorage(['projects', 'prompts', 'settings'])
-      const projects = result.projects || []
-      const prompts = result.prompts || []
-      const settings = result.settings || {}
+      const { projects = [], prompts = [], settings = {} } = await getChromeStorage(['projects', 'prompts', 'settings'])
       const deleteRequest = request as unknown as { id: string }
 
       if (deleteRequest.id === 'default') {
