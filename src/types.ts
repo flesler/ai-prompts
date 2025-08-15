@@ -30,7 +30,8 @@ export enum MessageAction {
   UPDATE_CONTEXT_MENU = 'updateContextMenu',
   SHOW_NOTIFICATION = 'showNotification',
   INSERT_PROMPT = 'insertPrompt',
-  GET_TEXTAREA_CONTENT = 'getTextareaContent'
+  GET_TEXTAREA_CONTENT = 'getTextareaContent',
+  OPEN_ADD_MODAL = 'openAddModal'
 }
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {

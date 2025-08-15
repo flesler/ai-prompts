@@ -32,6 +32,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupModalHandlers()
   setupProjectEventHandlers()
 
+  // Listen for messages from background script
+  chrome.runtime.onMessage.addListener((request) => {
+    if (request.action === MessageAction.OPEN_ADD_MODAL) {
+      showEditModal()
+    }
+  })
+
   addEvent('addPrompt', 'click', () => {
     showEditModal()
   })

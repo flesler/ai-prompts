@@ -78,6 +78,12 @@ async function createContextMenu() {
     const { prompts = [], projects = [], settings = {} } = await getChromeStorage(['prompts', 'projects', 'settings'])
     const recentPrompts = prompts.slice(-5).reverse()
 
+    // Always add "Add New Prompt" menu item
+    chrome.contextMenus.create({ id: 'add-new-prompt', title: 'Add New Prompt', contexts: ['editable'] })
+    if (recentPrompts.length > 0) {
+      chrome.contextMenus.create({ id: 'add-separator', type: 'separator', contexts: ['editable'] })
+    }
+
     recentPrompts.forEach((prompt) => {
       const projectId = prompt.project || 'default'
       const projectName = getProjectDisplayName(projectId, projects, settings)
@@ -112,6 +118,19 @@ async function createContextMenu() {
 }
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'add-new-prompt') {
+    if (chrome.action?.openPopup) {
+      chrome.action.openPopup()
+      // Send message to popup to open modal with content
+      setTimeout(() => {
+        chrome.runtime.sendMessage({ action: MessageAction.OPEN_ADD_MODAL })
+      }, 100)
+    } else {
+      chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') })
+    }
+    return
+  }
+
   if (info.menuItemId === 'view-all-prompts') {
     if (chrome.action?.openPopup) {
       chrome.action.openPopup()
