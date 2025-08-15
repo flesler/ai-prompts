@@ -35,6 +35,8 @@ function init() {
         console.log('🤖 AI Prompts - Context menu insert triggered:', truncate(request.content || '', 50))
         const success = insertPromptIntoActiveElement(request.content)
         sendResponse({ success })
+      } else if (request.action === MessageAction.GET_TEXTAREA_CONTENT) {
+        sendResponse({ content: getText() })
       }
     })
 
@@ -138,7 +140,7 @@ function setupInputDetection() {
     resizeTimeout = window.setTimeout(recalculate, 100)
   })
 
-  window.setInterval(recalculate, 1000)
+  window.setInterval(recalculate, 2000)
 }
 
 function recalculate() {
@@ -245,7 +247,7 @@ function insertPromptIntoActiveElement(content: string): boolean {
     targetElement,
     foundBySelector: !!document.querySelector(selectors[0]),
     selectors,
-    currentInputElement: currentInput,
+    currentInput,
     activeElement: document.activeElement,
     tagName: targetElement?.tagName,
     contentEditable: targetElement?.contentEditable,
@@ -312,6 +314,11 @@ function insertPromptIntoActiveElement(content: string): boolean {
     alert(`❌ Cannot insert prompt: No valid input field found on this ${currentPlatformName} page. Please click on a text input first.`)
     return false
   }
+}
+
+function getText(): string {
+  const input = currentInput as HTMLInputElement | HTMLTextAreaElement | undefined
+  return input?.value?.trim() || input?.textContent?.trim() || ''
 }
 
 // Always try to initialize - init() will handle retries if Chrome context isn't ready

@@ -101,6 +101,17 @@ function showEditModal(prompt?: Prompt) {
     title.textContent = 'Add New Prompt'
     titleInput.value = ''
     contentInput.value = ''
+
+    // Auto-populate from current textarea if available
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: MessageAction.GET_TEXTAREA_CONTENT }, (response) => {
+          if (response?.content && !contentInput.value) {
+            contentInput.value = response.content
+          }
+        })
+      }
+    })
   }
 
   modal.style.display = 'flex'

@@ -29,7 +29,8 @@ export enum MessageAction {
   DELETE_PROJECT = 'deleteProject',
   UPDATE_CONTEXT_MENU = 'updateContextMenu',
   SHOW_NOTIFICATION = 'showNotification',
-  INSERT_PROMPT = 'insertPrompt'
+  INSERT_PROMPT = 'insertPrompt',
+  GET_TEXTAREA_CONTENT = 'getTextareaContent'
 }
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
