@@ -13,7 +13,7 @@ yarn-error.log*
 
 # Build output
 dist/
-dist.zip
+*.zip
 
 # Chrome Web Store credentials
 .webstore-upload-config.json
