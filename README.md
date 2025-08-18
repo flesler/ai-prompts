@@ -1,6 +1,9 @@
-# AI Prompts - Chrome Extension
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/cdkeckobdlbiicpdboijmbllkbkhggao?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/ai-prompts/cdkeckobdlbiicpdboijmbllkbkhggao)
+[![Chrome Web Store Rating](https://img.shields.io/chrome-web-store/rating/cdkeckobdlbiicpdboijmbllkbkhggao)](https://chromewebstore.google.com/detail/ai-prompts/cdkeckobdlbiicpdboijmbllkbkhggao)
 
-A powerful Chrome extension for organizing and quick-inserting prompts across AI chat platforms. Streamline your AI workflows with project-based prompt management and instant insertion.
+# AI Prompts - Browser Extension
+
+A powerful Browser extension for organizing and quick-inserting prompts across AI chat platforms. Streamline your AI workflows with project-based prompt management and instant insertion.
 
 ## 🎯 Supported AI Platforms
 
@@ -82,7 +85,7 @@ src/
 ├── types.ts          # TypeScript interfaces and enums
 ├── utils.ts          # Shared utility functions
 └── public/
-    ├── manifest.json  # Chrome extension manifest (v3)
+    ├── manifest.json  # Browser extension manifest (v3)
     ├── popup.html     # Popup interface UI
     ├── options.html   # Settings page UI
     └── icons/         # Extension icons (16px, 48px, 128px)
@@ -143,46 +146,7 @@ Project,Title,Content
 
 ### Code Quality
 - **ESLint + TypeScript** - Comprehensive linting
-- **Prettier integration** - Consistent code formatting
 - **DRY utilities** - Reusable helpers and patterns
-
-## 🚀 Publishing
-
-### Chrome Web Store (Automated CLI)
-
-#### First-time Setup
-1. **Get OAuth2 Credentials:**
-   - Go to [Google Cloud Console](https://console.developers.google.com/)
-   - Create a project and enable Chrome Web Store API
-   - Create OAuth2 credentials (Desktop Application)
-   - Note your Client ID and Client Secret
-
-2. **Configure Extension:**
-   ```bash
-   # Copy the example config
-   cp .webstore-upload-config.example.json .webstore-upload-config.json
-   
-   # Edit with your credentials
-   nano .webstore-upload-config.json
-   ```
-
-3. **Authenticate:**
-   ```bash
-   npm run webstore:auth
-   ```
-
-#### Publishing Workflow
-```bash
-# Build, zip, and upload (but don't publish yet)
-npm run publish:webstore
-
-# Review the upload, then publish
-npm run webstore:publish
-```
-
-### Chrome Web Store (Manual)
-1. Run `npm run prepack && npm run zip`
-2. Upload `dist.zip` to [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole/)
 
 ## 📄 License
 

@@ -31,7 +31,8 @@ export enum MessageAction {
   SHOW_NOTIFICATION = 'showNotification',
   INSERT_PROMPT = 'insertPrompt',
   GET_TEXTAREA_CONTENT = 'getTextareaContent',
-  OPEN_ADD_MODAL = 'openAddModal'
+  OPEN_ADD_MODAL = 'openAddModal',
+  OPEN_POPUP = 'openPopup',
 }
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {

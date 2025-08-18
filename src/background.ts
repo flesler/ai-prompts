@@ -3,7 +3,7 @@ import type Browser from 'webextension-polyfill'
 import browser from 'webextension-polyfill'
 import type { InsertPromptResponse } from './types.js'
 import { MessageAction } from './types.js'
-import { execute, generateId, getIso, getProjectDisplayName, getStorage, setStorage, truncate } from './utils.js'
+import { execute, extensionName, generateId, getIso, getProjectDisplayName, getStorage, setStorage, truncate } from './utils.js'
 
 async function showNotification(title: string, message: string): Promise<void> {
   try {
@@ -17,7 +17,7 @@ async function showNotification(title: string, message: string): Promise<void> {
       browser.notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
-        title: title && title.trim() !== '' ? title : 'AI Prompts',
+        title: title && title.trim() !== '' ? title : extensionName,
         message: message.trim(),
       })
     }
@@ -40,12 +40,12 @@ async function insertPromptToTab(tabId: number, content: string): Promise<boolea
 }
 
 browser.runtime.onInstalled.addListener(async () => {
-  console.log('AI Prompts extension installed')
+  console.log(`${extensionName} extension installed`)
   initializeContextMenu()
 })
 
 browser.runtime.onStartup.addListener(async () => {
-  console.log('AI Prompts extension started')
+  console.log(`${extensionName} extension started`)
   initializeContextMenu()
 })
 
@@ -107,22 +107,32 @@ async function createContextMenu() {
 
 browser.contextMenus.onClicked.addListener(async (info: Browser.Menus.OnClickData, tab?: Browser.Tabs.Tab) => {
   if (info.menuItemId === 'add-new-prompt') {
-    if (browser.action?.openPopup) {
-      browser.action.openPopup()
-      // Send message to popup to open modal with content
-      setTimeout(() => {
-        browser.runtime.sendMessage({ action: MessageAction.OPEN_ADD_MODAL })
-      }, 100)
-    } else {
+    try {
+      if (browser.action?.openPopup) {
+        browser.action.openPopup()
+        // Send message to popup to open modal with content
+        setTimeout(() => {
+          browser.runtime.sendMessage({ action: MessageAction.OPEN_ADD_MODAL })
+        }, 100)
+      } else {
+        browser.tabs.create({ url: browser.runtime.getURL('popup.html') })
+      }
+    } catch (error) {
+      // Fallback to opening in a new tab if popup fails (Firefox user gesture requirement)
       browser.tabs.create({ url: browser.runtime.getURL('popup.html') })
     }
     return
   }
 
   if (info.menuItemId === 'view-all-prompts') {
-    if (browser.action?.openPopup) {
-      browser.action.openPopup()
-    } else {
+    try {
+      if (browser.action?.openPopup) {
+        browser.action.openPopup()
+      } else {
+        browser.tabs.create({ url: browser.runtime.getURL('popup.html') })
+      }
+    } catch (error) {
+      // Fallback to opening in a new tab if popup fails (Firefox user gesture requirement)
       browser.tabs.create({ url: browser.runtime.getURL('popup.html') })
     }
     return
@@ -215,11 +225,12 @@ browser.runtime.onMessage.addListener((request: any, sender: Browser.Runtime.Mes
   }
 
   if (request.action === MessageAction.SHOW_NOTIFICATION) {
-    showNotification((request as { title?: string }).title || 'AI Prompts', (request as { message?: string }).message || 'Action completed')
+    showNotification((request as { title?: string }).title || extensionName, (request as { message?: string }).message || 'Action completed')
     return true
   }
 
-  if ((request as { action: string }).action === 'openPopup') {
+  if (request.action === MessageAction.OPEN_POPUP) {
+    // Call openPopup immediately without any async operations to preserve user gesture
     if (browser.action?.openPopup) {
       browser.action.openPopup()
     } else {

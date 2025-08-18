@@ -152,3 +152,10 @@ export async function getStorage<K extends StorageKeys>(keys: K[]): Promise<Stor
 export async function setStorage<K extends StorageKeys>(data: Partial<Pick<Storage, K>>): Promise<void> {
   return browser.storage.sync.set(data)
 }
+
+// Browser detection
+declare const FIREFOX: string
+declare const NAME: string
+
+export const isFirefox = FIREFOX === '1'
+export const extensionName = NAME

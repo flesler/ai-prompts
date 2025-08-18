@@ -6,6 +6,7 @@ import { generateDomainMatches } from './src/domains.js'
 export default defineConfig((options) => {
   const dts = options.dts !== false
   const isFirefox = process.env.FIREFOX === '1'
+  const manifest = generateManifest(isFirefox)
   return {
     entry: {
       background: 'src/background.ts',
@@ -16,7 +17,7 @@ export default defineConfig((options) => {
     format: ['iife'],
     globalName: 'Extension',
     platform: 'browser',
-    target: 'chrome91',
+    target: isFirefox ? 'firefox109' : 'chrome91',
     outDir: 'dist',
     clean: true,
     minify: !options.watch,
@@ -27,13 +28,18 @@ export default defineConfig((options) => {
       options.legalComments = 'none'
       options.drop = ['debugger']
       options.entryNames = '[name]'
+      // Inject Firefox flag into the bundle
+      options.define = {
+        FIREFOX: JSON.stringify(process.env.FIREFOX || '0'),
+        NAME: JSON.stringify(`${manifest.name}@${manifest.version}`),
+      }
     },
     outExtension() {
       return { js: '.js' }
     },
     async onSuccess() {
       copyDirectory('src/public', 'dist')
-      await generateManifest(isFirefox)
+      writeFileSync('dist/manifest.json', JSON.stringify(manifest, null, 2))
       if (!dts) {
         console.log(`${isFirefox ? 'Firefox' : 'Chrome'} extension build success`)
       }
@@ -56,13 +62,18 @@ function copyDirectory(src: string, dest: string) {
   }
 }
 
-async function generateManifest(isFirefox = false) {
+function generateManifest(isFirefox = false) {
   const matches = generateDomainMatches()
-  const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'))
+  const pkg = JSON.parse(readFileSync('package.json', 'utf-8'))
   const manifest = JSON.parse(readFileSync('src/public/manifest.json', 'utf-8'))
 
-  manifest.version = packageJson.version
-  manifest.description = packageJson.description
+  const name = (pkg.name as string).split(/[_-]/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ').replace('Ai', 'AI')
+
+  manifest.name = manifest.action.default_title = name
+  manifest.version = pkg.version
+  manifest.description = pkg.description
   manifest.content_scripts[0].matches = matches
 
   if (isFirefox) {
@@ -70,15 +81,21 @@ async function generateManifest(isFirefox = false) {
     manifest.background = {
       scripts: ['background.js'],
     }
-    // Firefox-specific permissions or adjustments could go here
     manifest.browser_specific_settings = {
       gecko: {
-        id: '{ai-prompts@flesler.com}',
+        id: pkg.gecko_id,
         strict_min_version: '109.0',
       },
     }
+  } else {
+    // Chrome-specific manifest (ensure it stays as service_worker)
+    manifest.background = {
+      service_worker: 'background.js',
+    }
+    // Remove any Firefox-specific properties
+    delete manifest.browser_specific_settings
   }
 
-  writeFileSync('dist/manifest.json', JSON.stringify(manifest, null, 2))
   console.log(`Generated ${isFirefox ? 'Firefox' : 'Chrome'} manifest with ${matches.length} domain patterns`)
+  return manifest
 }

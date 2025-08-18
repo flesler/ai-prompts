@@ -2,12 +2,12 @@ import type Browser from 'webextension-polyfill'
 import browser from 'webextension-polyfill'
 import { getPlatformName, getSelectorsForDomain } from './domains.js'
 import { MessageAction } from './types.js'
-import { truncate } from './utils.js'
+import { extensionName, isFirefox, truncate } from './utils.js'
 
 // Only storage and runtime messaging are available in content scripts
 // chrome.tabs, chrome.contextMenus, chrome.notifications are NOT available
 
-console.log('AI Prompts content script loaded')
+console.log(`${extensionName} content script loaded`)
 
 let currentInput: HTMLElement | null = null
 let floatingButton: HTMLElement | null = null
@@ -19,14 +19,14 @@ let isInitialized = false
 function init() {
   // Check if extension context is valid
   if (!browser?.runtime?.id) {
-    console.warn('AI Prompts: Extension context not ready, will retry in 1 second...')
+    console.warn(`${extensionName}: Extension context not ready, will retry in 1 second...`)
     setTimeout(init, 1000)
     return
   }
 
   // Prevent double initialization
   if (isInitialized) {
-    console.log('AI Prompts: Already initialized, skipping')
+    console.log(`${extensionName}: Already initialized, skipping`)
     return
   }
 
@@ -34,7 +34,7 @@ function init() {
     // Set up message listener only if extension context is valid
     browser.runtime.onMessage.addListener((request: any, sender: Browser.Runtime.MessageSender, sendResponse: (response?: any) => void): true => {
       if (request.action === MessageAction.INSERT_PROMPT) {
-        console.log('🤖 AI Prompts - Context menu insert triggered:', truncate(request.content || '', 50))
+        console.log(`${extensionName}: Context menu insert triggered:`, truncate(request.content || '', 50))
         const success = insertPromptIntoActiveElement(request.content)
         sendResponse({ success })
         return true
@@ -51,16 +51,20 @@ function init() {
 
     // Only create button and setup detection for recognized AI platforms
     if (platformName) {
-      createFloatingButton()
-      setupInputDetection()
-      console.log(`AI Prompts: Activated for ${platformName} with selectors:`, platformSelectors)
+      if (!isFirefox) {
+        createFloatingButton()
+        setupInputDetection()
+      } else {
+        console.log(`${extensionName}: Floating button disabled in Firefox (popup gesture issues)`)
+      }
+      console.log(`${extensionName}: Activated for ${platformName} with selectors:`, platformSelectors)
     } else {
-      console.log('AI Prompts: Unknown platform, extension disabled')
+      console.log(`${extensionName}: Unknown platform, extension disabled`)
     }
 
     isInitialized = true
   } catch (error) {
-    console.error('AI Prompts: Initialization failed:', error)
+    console.error(`${extensionName}: Initialization failed:`, error)
     setTimeout(init, 2000) // Retry after 2 seconds
   }
 }
@@ -68,7 +72,7 @@ function init() {
 function createFloatingButton() {
   // Ensure document.body exists
   if (!document.body) {
-    console.warn('AI Prompts: Document body not ready, retrying in 100ms...')
+    console.warn(`${extensionName}: Document body not ready, retrying in 100ms...`)
     setTimeout(createFloatingButton, 100)
     return
   }
@@ -84,7 +88,7 @@ function createFloatingButton() {
     </svg>
   `
   floatingButton.className = 'ai-prompts-floating-btn'
-  floatingButton.title = 'AI Prompts - Click to insert'
+  floatingButton.title = `${extensionName} - Click to insert`
   floatingButton.style.cssText = `
     position: absolute;
     z-index: 10000;
@@ -118,10 +122,10 @@ function createFloatingButton() {
   floatingButton.addEventListener('click', (e) => {
     e.preventDefault()
     e.stopPropagation()
-    if (browser?.runtime?.sendMessage) {
-      browser.runtime.sendMessage({ action: 'openPopup' })
+    if (browser.runtime?.sendMessage) {
+      browser.runtime.sendMessage({ action: MessageAction.OPEN_POPUP })
     } else {
-      alert('Extension was updated. Please reload this page to continue using AI Prompts.')
+      alert(`Extension was updated. Please reload this page to continue using ${extensionName}.`)
     }
   })
 
@@ -230,7 +234,7 @@ function insertPromptIntoActiveElement(content: string): boolean {
 
   // Don't insert on unknown platforms
   if (!currentPlatformName) {
-    console.log('🤖 AI Prompts - Insert blocked: Unknown platform')
+    console.log(`🤖 ${extensionName} - Insert blocked: Unknown platform`)
     return false
   }
 
@@ -248,7 +252,7 @@ function insertPromptIntoActiveElement(content: string): boolean {
   if (!targetElement) {
     targetElement = currentInput || document.activeElement as HTMLElement
   }
-  console.log('🤖 AI Prompts - Insert attempt:', {
+  console.log(`🤖 ${extensionName} - Insert attempt:`, {
     targetElement,
     foundBySelector: !!document.querySelector(selectors[0]),
     selectors,
@@ -259,7 +263,7 @@ function insertPromptIntoActiveElement(content: string): boolean {
   })
 
   if (!targetElement) {
-    console.error('🤖 AI Prompts - No target element found')
+    console.error(`🤖 ${extensionName} - No target element found`)
     alert('❌ No input field found. Please click on a text input or textarea first.')
     return false
   }
@@ -280,38 +284,74 @@ function insertPromptIntoActiveElement(content: string): boolean {
 
       input.dispatchEvent(new Event('input', { bubbles: true }))
       input.dispatchEvent(new Event('change', { bubbles: true }))
-      console.log('🤖 AI Prompts - Successfully inserted into input/textarea:', truncate(content, 50))
+      console.log(`🤖 ${extensionName} - Successfully inserted into input/textarea:`, truncate(content, 50))
 
       showTemporarySuccess()
       return true
     } else {
       const currentContent = targetElement.textContent || ''
-      const separator = currentContent ? '\n' : ''
-      const newContent = content + separator + currentContent
+      // Handle contenteditable elements (like ProseMirror)
+      if (targetElement.classList.contains('ProseMirror')) {
+        // For ProseMirror, work with HTML content
+        const currentHTML = targetElement.innerHTML
+        const contentParagraphs = content.split('\n').map(line =>
+          line.trim() ? `<p>${line}</p>` : '<p></p>',
+        ).join('')
 
-      targetElement.textContent = newContent
-      targetElement.focus()
+        const separator = currentHTML.trim() ? '' : ''
+        const newHTML = contentParagraphs + separator + currentHTML
 
-      const selection = window.getSelection()
-      if (selection) {
-        const range = document.createRange()
-        const textNode = targetElement.firstChild
-        if (textNode) {
-          const cursorPosition = content.length + separator.length
-          range.setStart(textNode, cursorPosition)
-          range.setEnd(textNode, cursorPosition)
-          selection.removeAllRanges()
-          selection.addRange(range)
+        targetElement.innerHTML = newHTML
+        targetElement.focus()
+
+        // Set cursor at the end of inserted content
+        const selection = window.getSelection()
+        if (selection) {
+          const range = document.createRange()
+          const paragraphs = targetElement.querySelectorAll('p')
+          if (paragraphs.length > 0) {
+            const lastInsertedParagraph = paragraphs[content.split('\n').length - 1]
+            if (lastInsertedParagraph) {
+              range.selectNodeContents(lastInsertedParagraph)
+              range.collapse(false)
+              selection.removeAllRanges()
+              selection.addRange(range)
+            }
+          }
+        }
+
+        // Trigger input events for ProseMirror
+        targetElement.dispatchEvent(new Event('input', { bubbles: true }))
+        targetElement.dispatchEvent(new Event('change', { bubbles: true }))
+      } else {
+      // For other contenteditable elements, use text content
+        const separator = currentContent ? '\n' : ''
+        const newContent = content + separator + currentContent
+
+        targetElement.textContent = newContent
+        targetElement.focus()
+
+        const selection = window.getSelection()
+        if (selection) {
+          const range = document.createRange()
+          const textNode = targetElement.firstChild
+          if (textNode) {
+            const cursorPosition = content.length + separator.length
+            range.setStart(textNode, cursorPosition)
+            range.setEnd(textNode, cursorPosition)
+            selection.removeAllRanges()
+            selection.addRange(range)
+          }
         }
       }
 
-      console.log('🤖 AI Prompts - Successfully inserted into contentEditable:', truncate(content, 50))
+      console.log(`🤖 ${extensionName} - Successfully inserted into contentEditable:`, truncate(content, 50))
 
       showTemporarySuccess()
       return true
     }
   } else {
-    console.error('🤖 AI Prompts - Invalid target element:', {
+    console.error(`🤖 ${extensionName} - Invalid target element:`, {
       tagName: targetElement?.tagName,
       contentEditable: targetElement?.contentEditable,
       platformName: currentPlatformName,
@@ -336,7 +376,7 @@ if (document.readyState === 'loading') {
 // Set up a periodic check to reinitialize if extension gets reloaded
 setInterval(() => {
   if (!isInitialized && browser?.runtime?.id) {
-    console.log('AI Prompts: Extension context recovered, attempting initialization...')
+    console.log(`${extensionName}: Extension context recovered, attempting initialization...`)
     init()
   }
 }, 5000) // Check every 5 seconds
