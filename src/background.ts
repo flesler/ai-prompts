@@ -1,21 +1,9 @@
-import type { InsertPromptResponse, StorageResult } from './types.js'
+// Import webextension-polyfill for consistent promise-based APIs
+import type Browser from 'webextension-polyfill'
+import browser from 'webextension-polyfill'
+import type { InsertPromptResponse } from './types.js'
 import { MessageAction } from './types.js'
-import { generateId, getIso, getProjectDisplayName, truncate } from './utils.js'
-
-// Local Chrome API utilities for background script
-function promisify<TResult, TArgs extends any[]>(
-  fn: (...args: [...TArgs, (result: TResult) => void]) => void,
-): (...args: TArgs) => Promise<TResult> {
-  return (...args: TArgs) => new Promise((resolve) => {
-    fn(...args, resolve)
-  })
-}
-
-const getChromeStorage = promisify<StorageResult, [string[]]>(chrome.storage.sync.get.bind(chrome.storage.sync))
-const setChromeStorage = promisify<void, [Partial<StorageResult>]>(chrome.storage.sync.set.bind(chrome.storage.sync))
-const sendTabMessage = promisify<any, [number, any]>(chrome.tabs.sendMessage.bind(chrome.tabs))
-const removeAllContextMenus = promisify<void, []>(chrome.contextMenus.removeAll.bind(chrome.contextMenus))
-const queryTabs = promisify<chrome.tabs.Tab[], [chrome.tabs.QueryInfo]>(chrome.tabs.query.bind(chrome.tabs))
+import { execute, generateId, getIso, getProjectDisplayName, getStorage, setStorage, truncate } from './utils.js'
 
 async function showNotification(title: string, message: string): Promise<void> {
   try {
@@ -24,9 +12,9 @@ async function showNotification(title: string, message: string): Promise<void> {
       return
     }
 
-    const { settings = {} } = await getChromeStorage(['settings'])
+    const { settings } = await getStorage(['settings'])
     if (settings.enableNotifications) {
-      chrome.notifications.create({
+      browser.notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
         title: title && title.trim() !== '' ? title : 'AI Prompts',
@@ -40,7 +28,7 @@ async function showNotification(title: string, message: string): Promise<void> {
 
 async function insertPromptToTab(tabId: number, content: string): Promise<boolean> {
   try {
-    const response: InsertPromptResponse = await sendTabMessage(tabId, {
+    const response: InsertPromptResponse = await browser.tabs.sendMessage(tabId, {
       action: MessageAction.INSERT_PROMPT,
       content,
     })
@@ -51,19 +39,19 @@ async function insertPromptToTab(tabId: number, content: string): Promise<boolea
   }
 }
 
-chrome.runtime.onInstalled.addListener(async () => {
+browser.runtime.onInstalled.addListener(async () => {
   console.log('AI Prompts extension installed')
   initializeContextMenu()
 })
 
-chrome.runtime.onStartup.addListener(async () => {
+browser.runtime.onStartup.addListener(async () => {
   console.log('AI Prompts extension started')
   initializeContextMenu()
 })
 
 async function initializeContextMenu() {
   try {
-    const { settings = { enableContextMenu: true } } = await getChromeStorage(['settings'])
+    const { settings } = await getStorage(['settings'])
     if (settings.enableContextMenu) {
       await createContextMenu()
     }
@@ -74,22 +62,22 @@ async function initializeContextMenu() {
 
 async function createContextMenu() {
   try {
-    await removeAllContextMenus()
-    const { prompts = [], projects = [], settings = {} } = await getChromeStorage(['prompts', 'projects', 'settings'])
+    await browser.contextMenus.removeAll()
+    const { prompts, projects, settings } = await getStorage(['prompts', 'projects', 'settings'])
     const recentPrompts = prompts.slice(-5).reverse()
 
     // Always add "Add New Prompt" menu item
-    chrome.contextMenus.create({ id: 'add-new-prompt', title: 'Add New Prompt', contexts: ['editable'] })
+    browser.contextMenus.create({ id: 'add-new-prompt', title: 'Add New Prompt', contexts: ['editable'] })
     if (recentPrompts.length > 0) {
-      chrome.contextMenus.create({ id: 'add-separator', type: 'separator', contexts: ['editable'] })
+      browser.contextMenus.create({ id: 'add-separator', type: 'separator', contexts: ['editable'] })
     }
 
-    recentPrompts.forEach((prompt) => {
+    recentPrompts.forEach((prompt: any) => {
       const projectId = prompt.project || 'default'
       const projectName = getProjectDisplayName(projectId, projects, settings)
       const menuTitle = `${projectName} > ${prompt.title}`
 
-      chrome.contextMenus.create({
+      browser.contextMenus.create({
         id: `prompt-${prompt.id}`,
         title: truncate(menuTitle),
         contexts: ['editable'],
@@ -97,7 +85,7 @@ async function createContextMenu() {
     })
 
     if (recentPrompts.length > 0) {
-      chrome.contextMenus.create({
+      browser.contextMenus.create({
         id: 'ai-prompts-separator',
         type: 'separator',
         contexts: ['editable'],
@@ -105,7 +93,7 @@ async function createContextMenu() {
     }
 
     // Always show "View all prompts" menu item
-    chrome.contextMenus.create({
+    browser.contextMenus.create({
       id: 'view-all-prompts',
       title: 'View all prompts...',
       contexts: ['editable'],
@@ -117,25 +105,25 @@ async function createContextMenu() {
   }
 }
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+browser.contextMenus.onClicked.addListener(async (info: Browser.Menus.OnClickData, tab?: Browser.Tabs.Tab) => {
   if (info.menuItemId === 'add-new-prompt') {
-    if (chrome.action?.openPopup) {
-      chrome.action.openPopup()
+    if (browser.action?.openPopup) {
+      browser.action.openPopup()
       // Send message to popup to open modal with content
       setTimeout(() => {
-        chrome.runtime.sendMessage({ action: MessageAction.OPEN_ADD_MODAL })
+        browser.runtime.sendMessage({ action: MessageAction.OPEN_ADD_MODAL })
       }, 100)
     } else {
-      chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') })
+      browser.tabs.create({ url: browser.runtime.getURL('popup.html') })
     }
     return
   }
 
   if (info.menuItemId === 'view-all-prompts') {
-    if (chrome.action?.openPopup) {
-      chrome.action.openPopup()
+    if (browser.action?.openPopup) {
+      browser.action.openPopup()
     } else {
-      chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') })
+      browser.tabs.create({ url: browser.runtime.getURL('popup.html') })
     }
     return
   }
@@ -143,8 +131,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (typeof info.menuItemId === 'string' && info.menuItemId.startsWith('prompt-')) {
     const promptId = info.menuItemId.replace('prompt-', '')
     try {
-      const { prompts = [] } = await getChromeStorage(['prompts'])
-      const prompt = prompts.find((p) => p.id === promptId)
+      const { prompts } = await getStorage(['prompts'])
+      const prompt = prompts.find((p: any) => p.id === promptId)
 
       if (prompt && tab?.id) {
         await insertPromptToTab(tab.id, prompt.content)
@@ -155,13 +143,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 })
 
-chrome.commands.onCommand.addListener(async (command: string) => {
+browser.commands.onCommand.addListener(async (command: string) => {
   if (command === 'insert-last-prompt') {
     try {
-      const { prompts = [] } = await getChromeStorage(['prompts'])
+      const { prompts } = await getStorage(['prompts'])
       if (prompts.length > 0) {
         const lastPrompt = prompts[prompts.length - 1]
-        const tabs = await queryTabs({ active: true, currentWindow: true })
+        const tabs = await browser.tabs.query({ active: true, currentWindow: true })
 
         if (tabs[0]?.id) {
           await insertPromptToTab(tabs[0].id, lastPrompt.content)
@@ -173,30 +161,30 @@ chrome.commands.onCommand.addListener(async (command: string) => {
   }
 })
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request: any, sender: Browser.Runtime.MessageSender, sendResponse: (response?: any) => void): true => {
   if (request.action === MessageAction.GET_PROMPTS) {
-    ;(async () => {
-      const { prompts = [] } = await getChromeStorage(['prompts'])
+    execute(async () => {
+      const { prompts } = await getStorage(['prompts'])
       const projectFilter = (request as { project?: string }).project || 'default'
-      const filteredPrompts = prompts.filter((prompt) =>
+      const filteredPrompts = prompts.filter((prompt: any) =>
         (prompt.project || 'default') === projectFilter,
       )
       sendResponse({ prompts: filteredPrompts })
-    })()
+    })
     return true
   }
 
   if (request.action === MessageAction.GET_PROJECTS) {
-    ;(async () => {
-      const { projects = [] } = await getChromeStorage(['projects'])
+    execute(async () => {
+      const { projects } = await getStorage(['projects'])
       sendResponse({ projects })
-    })()
+    })
     return true
   }
 
   if (request.action === MessageAction.SAVE_PROMPT) {
-    ;(async () => {
-      const { prompts = [] } = await getChromeStorage(['prompts'])
+    execute(async () => {
+      const { prompts } = await getStorage(['prompts'])
       const saveRequest = request as unknown as { title: string; content: string; project?: string }
 
       prompts.push({
@@ -207,22 +195,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         createdAt: getIso(),
       })
 
-      await setChromeStorage({ prompts })
+      await setStorage({ prompts })
       createContextMenu()
       sendResponse({ success: true })
-    })()
+    })
     return true
   }
 
   if (request.action === MessageAction.UPDATE_CONTEXT_MENU) {
-    ; (async () => {
+    execute(async () => {
       if (request.enabled) {
         await createContextMenu()
       } else {
-        await removeAllContextMenus()
+        await browser.contextMenus.removeAll()
       }
       sendResponse({ success: true })
-    })()
+    })
     return true
   }
 
@@ -232,26 +220,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if ((request as { action: string }).action === 'openPopup') {
-    if (chrome.action?.openPopup) {
-      chrome.action.openPopup()
+    if (browser.action?.openPopup) {
+      browser.action.openPopup()
     } else {
-      chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') })
+      browser.tabs.create({ url: browser.runtime.getURL('popup.html') })
     }
     sendResponse({ success: true })
     return true
   }
 
   if (request.action === MessageAction.SAVE_PROJECT) {
-    ;(async () => {
-      const { projects = [], settings = {} } = await getChromeStorage(['projects', 'settings'])
+    execute(async () => {
+      const { projects, settings } = await getStorage(['projects', 'settings'])
       const projectRequest = request as unknown as { id?: string; name: string; description?: string }
 
       if (projectRequest.id === 'default') {
         settings.defaultProjectName = projectRequest.name
-        await setChromeStorage({ settings })
+        await setStorage({ settings })
         sendResponse({ success: true })
       } else if (projectRequest.id) {
-        const index = projects.findIndex((p) => p.id === projectRequest.id)
+        const index = projects.findIndex((p: any) => p.id === projectRequest.id)
         if (index !== -1) {
           projects[index] = {
             ...projects[index],
@@ -259,7 +247,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             description: projectRequest.description,
           }
         }
-        await setChromeStorage({ projects })
+        await setStorage({ projects })
         sendResponse({ success: true })
       } else {
         const newProject = {
@@ -270,18 +258,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
         projects.push(newProject)
 
-        await setChromeStorage({ projects })
+        await setStorage({ projects })
         sendResponse({ success: true, project: newProject })
       }
-    })()
+    })
     return true
   }
 
   if (request.action === MessageAction.UPDATE_PROMPT) {
-    ;(async () => {
-      const { prompts = [] } = await getChromeStorage(['prompts'])
+    execute(async () => {
+      const { prompts } = await getStorage(['prompts'])
       const updateRequest = request as unknown as { id: string; title: string; content: string }
-      const index = prompts.findIndex((p) => p.id === updateRequest.id)
+      const index = prompts.findIndex((p: any) => p.id === updateRequest.id)
 
       if (index !== -1) {
         prompts[index] = {
@@ -290,32 +278,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           content: updateRequest.content,
         }
 
-        await setChromeStorage({ prompts })
+        await setStorage({ prompts })
         createContextMenu()
         sendResponse({ success: true })
       } else {
         sendResponse({ success: false, error: 'Prompt not found' })
       }
-    })()
+    })
     return true
   }
 
   if (request.action === MessageAction.DELETE_PROMPT) {
-    ;(async () => {
-      const { prompts = [] } = await getChromeStorage(['prompts'])
+    execute(async () => {
+      const { prompts } = await getStorage(['prompts'])
       const deleteRequest = request as unknown as { id: string }
-      const filteredPrompts = prompts.filter((p) => p.id !== deleteRequest.id)
+      const filteredPrompts = prompts.filter((p: any) => p.id !== deleteRequest.id)
 
-      await setChromeStorage({ prompts: filteredPrompts })
+      await setStorage({ prompts: filteredPrompts })
       createContextMenu()
       sendResponse({ success: true })
-    })()
+    })
     return true
   }
 
   if (request.action === MessageAction.DELETE_PROJECT) {
-    ;(async () => {
-      const { projects = [], prompts = [], settings = {} } = await getChromeStorage(['projects', 'prompts', 'settings'])
+    execute(async () => {
+      const { projects, prompts, settings } = await getStorage(['projects', 'prompts', 'settings'])
       const deleteRequest = request as unknown as { id: string }
 
       if (deleteRequest.id === 'default') {
@@ -335,7 +323,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         delete settings.defaultProjectName
 
-        await setChromeStorage({ projects: remainingProjects, prompts: updatedPrompts, settings })
+        await setStorage({ projects: remainingProjects, prompts: updatedPrompts, settings })
         sendResponse({ success: true, newDefaultId: newDefaultProject.id })
       } else {
         const filteredProjects = projects.filter((p) => p.id !== deleteRequest.id)
@@ -345,12 +333,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           prompt.project === deleteRequest.id ? { ...prompt, project: 'default' } : prompt,
         )
 
-        await setChromeStorage({ projects: filteredProjects, prompts: updatedPrompts })
+        await setStorage({ projects: filteredProjects, prompts: updatedPrompts })
         sendResponse({ success: true })
       }
-    })()
+    })
     return true
   }
 
-  return false
+  return true
 })

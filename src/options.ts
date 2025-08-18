@@ -1,3 +1,4 @@
+import browser from 'webextension-polyfill'
 import type { ExtensionSettings, Prompt } from './types.js'
 import { DEFAULT_SETTINGS, MessageAction } from './types.js'
 import { addEvent, generateUniqueId, getCheckboxValue, getIso, getProjectDisplayName, getProjectsFromResult, getPromptsFromResult, getSettingsFromResult, getToday, setInputValue, showUINotification } from './utils.js'
@@ -17,53 +18,50 @@ document.addEventListener('DOMContentLoaded', () => {
   addEvent('importFile', 'change', importPrompts)
 })
 
-function loadSettings() {
-  chrome.storage.sync.get(['settings'], (result) => {
-    const settings = { ...DEFAULT_SETTINGS, ...getSettingsFromResult(result) }
+async function loadSettings() {
+  const result = await browser.storage.sync.get(['settings'])
+  const settings = { ...DEFAULT_SETTINGS, ...getSettingsFromResult(result) }
 
-    setInputValue('enableNotifications', settings.enableNotifications)
-    setInputValue('enableContextMenu', settings.enableContextMenu)
-  })
+  setInputValue('enableNotifications', settings.enableNotifications)
+  setInputValue('enableContextMenu', settings.enableContextMenu)
 }
 
-function saveSettings() {
+async function saveSettings() {
   const settings: ExtensionSettings = {
     enableNotifications: getCheckboxValue('enableNotifications'),
     enableContextMenu: getCheckboxValue('enableContextMenu'),
   }
 
-  chrome.storage.sync.set({ settings }, () => {
-    chrome.runtime.sendMessage({ action: MessageAction.UPDATE_CONTEXT_MENU, enabled: settings.enableContextMenu })
-  })
+  await browser.storage.sync.set({ settings })
+  browser.runtime.sendMessage({ action: MessageAction.UPDATE_CONTEXT_MENU, enabled: settings.enableContextMenu })
 }
 
-function exportPrompts() {
-  chrome.storage.sync.get(['prompts', 'projects', 'settings'], (result) => {
-    const prompts = getPromptsFromResult(result)
-    const projects = getProjectsFromResult(result)
-    const settings = getSettingsFromResult(result)
+async function exportPrompts() {
+  const result = await browser.storage.sync.get(['prompts', 'projects', 'settings'])
+  const prompts = getPromptsFromResult(result)
+  const projects = getProjectsFromResult(result)
+  const settings = getSettingsFromResult(result)
 
-    let csvContent = 'Project,Title,Content\n'
-    prompts.forEach(prompt => {
-      const projectName = getProjectDisplayName(prompt.project || 'default', projects, settings)
+  let csvContent = 'Project,Title,Content\n'
+  prompts.forEach(prompt => {
+    const projectName = getProjectDisplayName(prompt.project || 'default', projects, settings)
 
-      const title = escapeCSV(prompt.title || '')
-      const content = escapeCSV(prompt.content || '')
-      const project = escapeCSV(projectName)
+    const title = escapeCSV(prompt.title || '')
+    const content = escapeCSV(prompt.content || '')
+    const project = escapeCSV(projectName)
 
-      csvContent += `${project},${title},${content}\n`
-    })
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `ai-prompts_${getToday()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-
-    showUINotification('Prompts exported to CSV successfully!', 'success')
+    csvContent += `${project},${title},${content}\n`
   })
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `ai-prompts_${getToday()}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+
+  showUINotification('Prompts exported to CSV successfully!', 'success')
 }
 
 function escapeCSV(text: string): string {
@@ -78,20 +76,18 @@ function importPrompts(event: Event) {
   if (!file) return
 
   const reader = new FileReader()
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     const content = e.target?.result as string
 
     try {
       const prompts = parseCSV(content)
       if (prompts.length > 0) {
-        chrome.storage.sync.get(['prompts'], (result) => {
-          const existingPrompts = getPromptsFromResult(result)
-          const allPrompts = [...existingPrompts, ...prompts]
+        const result = await browser.storage.sync.get(['prompts'])
+        const existingPrompts = getPromptsFromResult(result)
+        const allPrompts = [...existingPrompts, ...prompts]
 
-          chrome.storage.sync.set({ prompts: allPrompts }, () => {
-            showUINotification(`Imported ${prompts.length} prompts from CSV successfully!`, 'success')
-          })
-        })
+        await browser.storage.sync.set({ prompts: allPrompts })
+        showUINotification(`Imported ${prompts.length} prompts from CSV successfully!`, 'success')
       } else {
         showUINotification('No valid prompts found in CSV file.', 'error')
       }

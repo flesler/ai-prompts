@@ -1,26 +1,8 @@
-import type { ExtensionSettings, MessageResponse, Project, ProjectsResponse, Prompt, PromptsResponse, SaveProjectResponse, StorageResult } from './types.js'
+// Import webextension-polyfill for consistent promise-based APIs
+import browser from 'webextension-polyfill'
+import type { ExtensionSettings, GetTextareaContentResponse, MessageResponse, Project, ProjectsResponse, Prompt, PromptsResponse, SaveProjectResponse } from './types.js'
 import { MessageAction } from './types.js'
-import { addEvent, confirmAction, escapeHtml, getElement, getProjectDisplayName, getRequiredElement, populateSelectOptions, truncate } from './utils.js'
-
-// Local Chrome API utilities for popup script
-function promisify<TResult, TArgs extends any[]>(
-  fn: (...args: [...TArgs, (result: TResult) => void]) => void,
-): (...args: TArgs) => Promise<TResult> {
-  return (...args: TArgs) => new Promise((resolve) => {
-    fn(...args, resolve)
-  })
-}
-
-const getChromeStorage = promisify<StorageResult, [string[]]>(chrome.storage.sync.get.bind(chrome.storage.sync))
-
-function sendMessage<T = unknown>(
-  action: MessageAction,
-  data: Record<string, unknown> = {},
-): Promise<T> {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ action, ...data }, resolve)
-  })
-}
+import { addEvent, confirmAction, escapeHtml, execute, getElement, getProjectDisplayName, getRequiredElement, populateSelectOptions, sendMessage, truncate } from './utils.js'
 
 let currentProject = 'default'
 let editingPromptId: string | null = null
@@ -33,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupProjectEventHandlers()
 
   // Listen for messages from background script
-  chrome.runtime.onMessage.addListener((request) => {
+  browser.runtime.onMessage.addListener((request: any) => {
     if (request.action === MessageAction.OPEN_ADD_MODAL) {
       showEditModal()
     }
@@ -47,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (projectSelect) {
     projectSelect.addEventListener('change', (e) => {
       currentProject = (e.target as HTMLSelectElement).value
-      chrome.storage.sync.set({ lastSelectedProject: currentProject })
+      browser.storage.sync.set({ lastSelectedProject: currentProject })
       loadPrompts()
     })
   }
@@ -64,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   })
 
   addEvent('manageProjects', 'click', () => {
-    chrome.runtime.openOptionsPage()
+    browser.runtime.openOptionsPage()
   })
 })
 
@@ -86,9 +68,9 @@ function setupModalHandlers() {
 }
 
 async function loadSavedProject(): Promise<void> {
-  const result = await getChromeStorage(['lastSelectedProject'])
+  const result = await browser.storage.sync.get(['lastSelectedProject'])
   if (result.lastSelectedProject) {
-    currentProject = result.lastSelectedProject
+    currentProject = result.lastSelectedProject as string
   }
 }
 
@@ -110,13 +92,17 @@ function showEditModal(prompt?: Prompt) {
     contentInput.value = ''
 
     // Auto-populate from current textarea if available
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: MessageAction.GET_TEXTAREA_CONTENT }, (response) => {
+    execute(async () => {
+      try {
+        const tabs = await browser.tabs.query({ active: true, currentWindow: true })
+        if (tabs[0]?.id) {
+          const response = await browser.tabs.sendMessage(tabs[0].id, { action: MessageAction.GET_TEXTAREA_CONTENT }) as GetTextareaContentResponse
           if (response?.content && !contentInput.value) {
             contentInput.value = response.content
           }
-        })
+        }
+      } catch (error) {
+        console.log('Could not auto-populate from page content')
       }
     })
   }
@@ -143,7 +129,7 @@ function hideProjectModal() {
 async function loadProjectsInModal() {
   const [projectsResponse, settingsResult] = await Promise.all([
     sendMessage<ProjectsResponse>(MessageAction.GET_PROJECTS),
-    getChromeStorage(['settings']),
+    browser.storage.sync.get(['settings']),
   ])
 
   const projects = projectsResponse.projects || []
@@ -199,7 +185,7 @@ async function deleteProject(projectId: string) {
     if (response.success) {
       if (currentProject === projectId) {
         currentProject = 'default'
-        chrome.storage.sync.set({ lastSelectedProject: currentProject })
+        browser.storage.sync.set({ lastSelectedProject: currentProject })
       }
       loadProjectsInModal()
       loadProjects()
@@ -252,7 +238,7 @@ function handleFormSubmit() {
 async function loadProjects() {
   const [projectsResponse, settingsResult] = await Promise.all([
     sendMessage<ProjectsResponse>(MessageAction.GET_PROJECTS),
-    getChromeStorage(['settings']),
+    browser.storage.sync.get(['settings']),
   ])
 
   displayProjects(projectsResponse.projects || [], settingsResult.settings || {})
@@ -379,16 +365,19 @@ async function createProject(name: string) {
   }
 }
 
-function insertPromptIntoPage(content: string) {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+async function insertPromptIntoPage(content: string) {
+  try {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true })
     if (tabs[0]?.id) {
-      chrome.tabs.sendMessage(tabs[0].id, {
+      await browser.tabs.sendMessage(tabs[0].id, {
         action: MessageAction.INSERT_PROMPT,
         content,
       })
       window.close() // Close popup after inserting
     }
-  })
+  } catch (error) {
+    console.error('Failed to insert prompt into page:', error)
+  }
 }
 
 async function copyPromptToClipboard(content: string) {

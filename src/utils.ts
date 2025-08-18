@@ -1,4 +1,6 @@
-import type { ExtensionSettings, MessageAction, Project, Prompt, StorageResult } from './types.js'
+import browser from 'webextension-polyfill'
+import type { ExtensionSettings, MessageAction, Project, Prompt, Storage, StorageGet, StorageKeys, StorageResult } from './types.js'
+import { DEFAULT_SETTINGS } from './types.js'
 
 export function getElement<T extends HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null
@@ -22,9 +24,7 @@ export function sendMessage<T = unknown>(
   action: MessageAction,
   data: Record<string, unknown> = {},
 ): Promise<T> {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ action, ...data }, resolve)
-  })
+  return browser.runtime.sendMessage({ action, ...data })
 }
 
 export function getPromptsFromResult(result: StorageResult): Prompt[] {
@@ -126,4 +126,29 @@ export function getProjectDisplayName(projectId: string, projects: Project[], se
     return settings.defaultProjectName || 'Default Project'
   }
   return projects.find(p => p.id === projectId)?.name || 'Unknown Project'
+}
+
+export const execute = (fn: () => Promise<void>) => fn()
+
+// Typed storage helpers with proper defaults
+const storageDefaults: Storage = {
+  prompts: [],
+  projects: [],
+  settings: DEFAULT_SETTINGS,
+  lastSelectedProject: 'default',
+}
+
+export async function getStorage<K extends StorageKeys>(keys: K[]): Promise<StorageGet<K> & Partial<Storage>> {
+  const result = await browser.storage.sync.get(keys)
+  const typedResult = {} as StorageGet<K> & Partial<Storage>
+
+  for (const key of keys) {
+    ; (typedResult as any)[key] = result[key] ?? storageDefaults[key]
+  }
+
+  return typedResult
+}
+
+export async function setStorage<K extends StorageKeys>(data: Partial<Pick<Storage, K>>): Promise<void> {
+  return browser.storage.sync.set(data)
 }

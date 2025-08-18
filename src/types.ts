@@ -65,6 +65,18 @@ export interface StorageResult {
   lastSelectedProject?: string
 }
 
+// Complete storage structure interface
+export interface Storage {
+  prompts: Prompt[]
+  projects: Project[]
+  settings: ExtensionSettings
+  lastSelectedProject: string
+}
+
+// Helper type for partial storage keys
+export type StorageKeys = keyof Storage
+export type StorageGet<K extends StorageKeys> = Pick<Storage, K>
+
 export interface MessageRequest {
   action: MessageAction
   [key: string]: unknown
@@ -93,4 +105,8 @@ export interface SaveProjectResponse extends MessageResponse {
 
 export interface DeleteProjectResponse extends MessageResponse {
   newDefaultId?: string
+}
+
+export interface GetTextareaContentResponse {
+  content: string
 }

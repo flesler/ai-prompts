@@ -5,6 +5,7 @@ import { generateDomainMatches } from './src/domains.js'
 
 export default defineConfig((options) => {
   const dts = options.dts !== false
+  const isFirefox = process.env.FIREFOX === '1'
   return {
     entry: {
       background: 'src/background.ts',
@@ -32,9 +33,9 @@ export default defineConfig((options) => {
     },
     async onSuccess() {
       copyDirectory('src/public', 'dist')
-      await generateManifest()
+      await generateManifest(isFirefox)
       if (!dts) {
-        console.log('Chrome extension build success')
+        console.log(`${isFirefox ? 'Firefox' : 'Chrome'} extension build success`)
       }
     },
   }
@@ -55,7 +56,7 @@ function copyDirectory(src: string, dest: string) {
   }
 }
 
-async function generateManifest() {
+async function generateManifest(isFirefox = false) {
   const matches = generateDomainMatches()
   const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'))
   const manifest = JSON.parse(readFileSync('src/public/manifest.json', 'utf-8'))
@@ -64,6 +65,20 @@ async function generateManifest() {
   manifest.description = packageJson.description
   manifest.content_scripts[0].matches = matches
 
+  if (isFirefox) {
+    // Firefox-specific manifest modifications
+    manifest.background = {
+      scripts: ['background.js'],
+    }
+    // Firefox-specific permissions or adjustments could go here
+    manifest.browser_specific_settings = {
+      gecko: {
+        id: '{ai-prompts@flesler.com}',
+        strict_min_version: '109.0',
+      },
+    }
+  }
+
   writeFileSync('dist/manifest.json', JSON.stringify(manifest, null, 2))
-  console.log(`Generated manifest with ${matches.length} domain patterns`)
+  console.log(`Generated ${isFirefox ? 'Firefox' : 'Chrome'} manifest with ${matches.length} domain patterns`)
 }

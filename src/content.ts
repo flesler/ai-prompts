@@ -1,3 +1,5 @@
+import type Browser from 'webextension-polyfill'
+import browser from 'webextension-polyfill'
 import { getPlatformName, getSelectorsForDomain } from './domains.js'
 import { MessageAction } from './types.js'
 import { truncate } from './utils.js'
@@ -16,7 +18,7 @@ let isInitialized = false
 
 function init() {
   // Check if extension context is valid
-  if (!chrome?.runtime?.id) {
+  if (!browser?.runtime?.id) {
     console.warn('AI Prompts: Extension context not ready, will retry in 1 second...')
     setTimeout(init, 1000)
     return
@@ -30,14 +32,17 @@ function init() {
 
   try {
     // Set up message listener only if extension context is valid
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    browser.runtime.onMessage.addListener((request: any, sender: Browser.Runtime.MessageSender, sendResponse: (response?: any) => void): true => {
       if (request.action === MessageAction.INSERT_PROMPT) {
         console.log('🤖 AI Prompts - Context menu insert triggered:', truncate(request.content || '', 50))
         const success = insertPromptIntoActiveElement(request.content)
         sendResponse({ success })
+        return true
       } else if (request.action === MessageAction.GET_TEXTAREA_CONTENT) {
         sendResponse({ content: getText() })
+        return true
       }
+      return true
     })
 
     const fullHostPath = window.location.hostname + window.location.pathname
@@ -113,8 +118,8 @@ function createFloatingButton() {
   floatingButton.addEventListener('click', (e) => {
     e.preventDefault()
     e.stopPropagation()
-    if (chrome?.runtime?.sendMessage) {
-      chrome.runtime.sendMessage({ action: 'openPopup' })
+    if (browser?.runtime?.sendMessage) {
+      browser.runtime.sendMessage({ action: 'openPopup' })
     } else {
       alert('Extension was updated. Please reload this page to continue using AI Prompts.')
     }
@@ -330,7 +335,7 @@ if (document.readyState === 'loading') {
 
 // Set up a periodic check to reinitialize if extension gets reloaded
 setInterval(() => {
-  if (!isInitialized && chrome?.runtime?.id) {
+  if (!isInitialized && browser?.runtime?.id) {
     console.log('AI Prompts: Extension context recovered, attempting initialization...')
     init()
   }
