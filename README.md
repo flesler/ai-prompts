@@ -1,5 +1,7 @@
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/cdkeckobdlbiicpdboijmbllkbkhggao?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/ai-prompts/cdkeckobdlbiicpdboijmbllkbkhggao)
 [![Chrome Web Store Rating](https://img.shields.io/chrome-web-store/rating/cdkeckobdlbiicpdboijmbllkbkhggao)](https://chromewebstore.google.com/detail/ai-prompts/cdkeckobdlbiicpdboijmbllkbkhggao)
+[![Firefox Add-ons](https://img.shields.io/amo/v/ai-prompts?label=Firefox%20Add-ons)](https://addons.mozilla.org/en-US/firefox/addon/ai-prompts/)
+[![Firefox Add-ons Rating](https://img.shields.io/amo/rating/ai-prompts)](https://addons.mozilla.org/en-US/firefox/addon/ai-prompts/)
 
 # AI Prompts - Browser Extension
 
@@ -32,15 +34,21 @@ A powerful Browser extension for organizing and quick-inserting prompts across A
 
 ### 🔧 Professional Tools
 - **CSV Import/Export** - Backup and share your prompt libraries
-- **Cross-Device Sync** - Chrome storage sync keeps prompts available everywhere
+- **Cross-Device Sync** - Browser storage sync keeps prompts available everywhere
 - **Keyboard Shortcuts** - Fast access via hotkeys
 - **Smart Detection** - Automatically detects input fields on AI platforms
 
 ## 🚀 Quick Start
 
 ### 1. Installation
-1. Download the extension from Chrome Web Store *(coming soon)*
-2. Or build from source (see Development section below)
+
+**Chrome:**
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/cdkeckobdlbiicpdboijmbllkbkhggao?label=Install)](https://chromewebstore.google.com/detail/ai-prompts/cdkeckobdlbiicpdboijmbllkbkhggao)
+
+**Firefox:**
+[![Firefox Add-ons](https://img.shields.io/amo/v/ai-prompts?label=Install)](https://addons.mozilla.org/en-US/firefox/addon/ai-prompts/)
+
+**Or build from source** (see Development section below)
 
 ### 2. Usage
 1. **Visit any supported AI platform** (ChatGPT, Claude, etc.)
@@ -50,7 +58,7 @@ A powerful Browser extension for organizing and quick-inserting prompts across A
 5. **Right-click** in text areas for quick access to recent prompts
 
 ### 3. Managing Prompts
-1. **Click the extension icon** in Chrome toolbar
+1. **Click the extension icon** in browser toolbar
 2. **Add new prompts** with title and content
 3. **Organize by projects** for better workflow management
 4. **Export/Import CSV** via Settings for backup and sharing
@@ -67,11 +75,16 @@ npm install
 npm run prepack
 ```
 
-### Load in Chrome
+### Load Extension for Development
+**Chrome:**
 1. Open `chrome://extensions/`
 2. Enable "Developer mode"
-3. Click "Load unpacked"
-4. Select the `dist/` folder
+3. Click "Load unpacked" and select the `dist/` folder
+
+**Firefox:**
+1. Open `about:debugging#/runtime/this-firefox`
+2. Click "Load Temporary Add-on"
+3. Select `dist/manifest.json`
 
 ## 📁 Project Structure
 
@@ -96,6 +109,7 @@ src/
 | Command | Description |
 |---------|-------------|
 | `npm run build` | Build optimized extension for Chrome |
+| `npm run build:firefox` | Build optimized extension for Firefox |
 | `npm run prepack` | Run full test suite (lint + build) |
 | `npm run lint:full` | TypeScript check + ESLint validation |
 | `npm run lint:fix` | Auto-fix linting issues |
@@ -103,12 +117,13 @@ src/
 
 ## 🏗️ Technical Architecture
 
-### Chrome Manifest V3
-- **Service Worker** background script for lifecycle management
+### Cross-Browser Extension (Manifest V3)
+- **Background Scripts** - Service worker (Chrome) / Background scripts (Firefox)
 - **Content Scripts** injected into AI platform pages
-- **Chrome Storage Sync** for cross-device prompt synchronization
+- **Browser Storage Sync** for cross-device prompt synchronization
 - **Context Menus** for right-click prompt insertion
 - **Keyboard Shortcuts** for quick access
+- **WebExtension Polyfill** for cross-browser compatibility
 
 ### AI Platform Detection
 - **Smart Selectors** - Detects input fields on each AI platform specifically
